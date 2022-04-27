@@ -20,7 +20,7 @@ type WorkoutReceiver interface {
 
 	NewWorkout(w models.Workout) models.Workout
 	UpdateWorkout(id int, w models.Workout) (models.Workout, error)
-	ApproveWorkout(id int) error
+	ApproveWorkout(id int) (models.Workout, error)
 	CompleteWorkout(id int) error
 }
 
@@ -74,14 +74,14 @@ func (r *WorkoutRepository) UpdateWorkout(id int, w models.Workout) (models.Work
 	return data.Workouts[index], nil
 }
 
-func (r *WorkoutRepository) ApproveWorkout(id int) error {
+func (r *WorkoutRepository) ApproveWorkout(id int) (models.Workout, error) {
 	index := indexOf(id)
 	if index == 0 {
-		return errWorkoutNotFound
+		return models.Workout{}, errWorkoutNotFound
 	}
 
 	data.Workouts[index].Approved = true
-	return nil
+	return data.Workouts[index], nil
 }
 
 func (r *WorkoutRepository) CompleteWorkout(id int) error {

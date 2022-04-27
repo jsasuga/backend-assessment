@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/jsasuga/stryd-backend-challenge/internal/data"
 	"github.com/jsasuga/stryd-backend-challenge/internal/handlers"
+	"github.com/jsasuga/stryd-backend-challenge/internal/notifying"
 	"github.com/jsasuga/stryd-backend-challenge/internal/repositories"
 	"github.com/jsasuga/stryd-backend-challenge/internal/services"
 	"net/http"
@@ -19,8 +20,10 @@ func main() {
 	e.Use(middleware.Recover())
 
 	workoutRepository := repositories.CreateWorkoutRepository()
+	email := notifying.CreateEmailSender("apiKey", "apiUrl", "sender")
 	workoutService := services.WorkoutService{
 		WorkoutRepository: workoutRepository,
+		EmailSender:       email,
 	}
 	workoutHandler := handlers.CreateWorkoutHandler(&workoutService)
 
@@ -36,7 +39,7 @@ func main() {
 	e.POST("/workouts", workoutHandler.RequestWorkout)
 	e.PUT("/workouts/:id", workoutHandler.UpdateWorkout)
 	e.PUT("/workouts/:id/approve", workoutHandler.ApproveWorkout)
-	e.PUT("/workouts/:id/complete", workoutHandler.CompleteWorkout)
+	e.POST("/workouts/:id/complete", workoutHandler.CompleteWorkout)
 	// Start server
 	e.Logger.Fatal(e.Start(":8080"))
 }

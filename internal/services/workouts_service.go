@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/jsasuga/stryd-backend-challenge/internal/models"
+	"github.com/jsasuga/stryd-backend-challenge/internal/notifying"
 	"github.com/jsasuga/stryd-backend-challenge/internal/repositories"
 )
 
@@ -9,7 +10,7 @@ type Workouts interface {
 	All() []models.Workout
 	GetByAthlete(athlete string) []models.Workout
 	GetByCoach(athlete string) []models.Workout
-	Request(r models.RequestNewWorkout) models.Workout
+	Request(r models.RequestNewWorkout) (models.Workout, error)
 	Update(id int, u models.UpdateWorkout) (models.Workout, error)
 	Approve(id int) error
 	Complete(id int) error
@@ -17,6 +18,7 @@ type Workouts interface {
 
 type WorkoutService struct {
 	WorkoutRepository repositories.WorkoutReceiver
+	EmailSender       notifying.EmailNotifier
 }
 
 func (s *WorkoutService) All() []models.Workout {
@@ -34,7 +36,7 @@ func (s *WorkoutService) GetByCoach(coach string) []models.Workout {
 	return workouts
 }
 
-func (s *WorkoutService) Request(r models.RequestNewWorkout) models.Workout {
+func (s *WorkoutService) Request(r models.RequestNewWorkout) (models.Workout, error) {
 	/*
 		things to consider:
 		* a workout hasn't been completed, do we allow it to request a new workout?
@@ -53,7 +55,14 @@ func (s *WorkoutService) Request(r models.RequestNewWorkout) models.Workout {
 	w = s.WorkoutRepository.NewWorkout(w)
 
 	// todo: add notifying layer - coach
-	return w
+	if err := s.EmailSender.SendEmail(
+		"A new workout has been requested",
+		[]string{w.Coach},
+		"workoutRequested",
+		nil); err != nil {
+		return models.Workout{}, err
+	}
+	return w, nil
 }
 
 func (s *WorkoutService) Update(id int, u models.UpdateWorkout) (models.Workout, error) {
@@ -78,15 +87,31 @@ func (s *WorkoutService) Update(id int, u models.UpdateWorkout) (models.Workout,
 	}
 
 	// todo: add notifying layer - both
+
+	if err := s.EmailSender.SendEmail(
+		"Your workout has been updated",
+		[]string{w.Coach, w.Athlete},
+		"workoutUpdated",
+		nil); err != nil {
+		return models.Workout{}, err
+	}
 	return w, nil
 }
 
 func (s *WorkoutService) Approve(id int) error {
-	if err := s.WorkoutRepository.ApproveWorkout(id); err != nil {
+	w, err := s.WorkoutRepository.ApproveWorkout(id)
+	if err != nil {
 		return err
 	}
 
 	// todo: add notifying layer - both
+	if err := s.EmailSender.SendEmail(
+		"Your workout has been approved",
+		[]string{w.Coach, w.Athlete},
+		"workoutApproved",
+		nil); err != nil {
+		return err
+	}
 	return nil
 }
 
