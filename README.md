@@ -1,4 +1,4 @@
-# stryd-backend-challenge
+# backend-assessment
 
 ```shell
 go run .
